@@ -19,7 +19,10 @@ pipeline {
         stage('Application Test') {
             steps {
                 dir('app') {
-                    sh 'npm ci'
+                    sh '''
+                        npm ci
+                        node --check server.js
+                    '''
                 }
             }
         }
@@ -40,61 +43,112 @@ pipeline {
                 sh '''
                     docker run -d \
                       --name ${APP_NAME}-test-${BUILD_NUMBER} \
-                      -p 3100:3000 \
+                      -p 3100:3001 \
                       ${APP_NAME}:${BUILD_NUMBER}
 
                     sleep 5
 
                     curl -f http://localhost:3100/health
 
+                    curl -f http://localhost:3100/api/products
+
                     docker rm -f ${APP_NAME}-test-${BUILD_NUMBER}
                 '''
             }
         }
 
+        stage('AWS Authentication') {
+            steps {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                     credentialsId: 'jenkins-ecr-user']
+                ]) {
+                    sh '''
+                        echo "Checking AWS identity..."
+
+                        aws sts get-caller-identity
+                    '''
+                }
+            }
+        }
+
         stage('ECR Login') {
             steps {
-                sh '''
-                    aws ecr get-login-password \
-                      --region ${AWS_REGION} | \
-                    docker login \
-                      --username AWS \
-                      --password-stdin \
-                      $(aws sts get-caller-identity --query Account --output text).dkr.ecr.${AWS_REGION}.amazonaws.com
-                '''
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                     credentialsId: 'jenkins-ecr-user']
+                ]) {
+                    sh '''
+                        ACCOUNT_ID=$(aws sts get-caller-identity \
+                          --query Account \
+                          --output text)
+
+                        echo "AWS Account: ${ACCOUNT_ID}"
+                        echo "AWS Region: ${AWS_REGION}"
+
+                        aws ecr get-login-password \
+                          --region ${AWS_REGION} | \
+                        docker login \
+                          --username AWS \
+                          --password-stdin \
+                          ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                    '''
+                }
             }
         }
 
         stage('Push to ECR') {
             steps {
-                sh '''
-                    ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                     credentialsId: 'jenkins-ecr-user']
+                ]) {
+                    sh '''
+                        ACCOUNT_ID=$(aws sts get-caller-identity \
+                          --query Account \
+                          --output text)
 
-                    ECR_URI=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}
+                        ECR_URI=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}
 
-                    docker tag \
-                      ${APP_NAME}:${BUILD_NUMBER} \
-                      ${ECR_URI}:${BUILD_NUMBER}
+                        echo "ECR Repository: ${ECR_URI}"
 
-                    docker tag \
-                      ${APP_NAME}:${BUILD_NUMBER} \
-                      ${ECR_URI}:latest
+                        docker tag \
+                          ${APP_NAME}:${BUILD_NUMBER} \
+                          ${ECR_URI}:${BUILD_NUMBER}
 
-                    docker push ${ECR_URI}:${BUILD_NUMBER}
+                        docker tag \
+                          ${APP_NAME}:${BUILD_NUMBER} \
+                          ${ECR_URI}:latest
 
-                    docker push ${ECR_URI}:latest
-                '''
+                        docker push ${ECR_URI}:${BUILD_NUMBER}
+
+                        docker push ${ECR_URI}:latest
+                    '''
+                }
             }
         }
     }
 
     post {
+
         success {
-            echo 'DevOps Production Platform CI/CD completed successfully!'
+            echo '=========================================='
+            echo 'DevOps Production Platform CI/CD SUCCESS'
+            echo 'Docker image pushed to Amazon ECR'
+            echo '=========================================='
         }
 
         failure {
-            echo 'CI/CD pipeline failed. Check the failed stage.'
+            echo '=========================================='
+            echo 'CI/CD PIPELINE FAILED'
+            echo 'Check the failed stage'
+            echo '=========================================='
+        }
+
+        always {
+            sh '''
+                docker rm -f ${APP_NAME}-test-${BUILD_NUMBER} 2>/dev/null || true
+            '''
         }
     }
 }
