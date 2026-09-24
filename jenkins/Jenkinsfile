@@ -27,7 +27,7 @@ pipeline {
 			steps {
 				dir('app')
 				sh '''
-					docker build \ 
+					docker build \
 					-t ${APP_NAME}:${BUILD_NUMBER} \
 					-p 3100:3000 \
 					${APP_NAME}:${BUILD_NUMBER}
