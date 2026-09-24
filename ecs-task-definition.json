@@ -1,0 +1,37 @@
+{
+  "family": "devops-production-app",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::889038136848:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "devops-production-app",
+      "image": "889038136848.dkr.ecr.us-east-1.amazonaws.com/devops-production-app:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3001,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "name": "APP_VERSION",
+          "value": "1.0.0"
+        }
+      ]
+    }
+  ]
+}
