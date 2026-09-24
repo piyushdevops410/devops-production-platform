@@ -26,25 +26,13 @@ app.get("/health", (req, res) => {
 
 app.get("/api/products", (req, res) => {
   res.json([
-    {
-      id: 1,
-      name: "Laptop",
-      price: 75000
-    },
-    {
-      id: 2,
-      name: "Keyboard",
-      price: 2500
-    },
-    {
-      id: 3,
-      name: "Mouse",
-      price: 1200
-    }
+    { id: 1, name: "Laptop", price: 75000 },
+    { id: 2, name: "Keyboard", price: 2500 },
+    { id: 3, name: "Mouse", price: 1200 }
   ]);
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(
     `Application started on port ${PORT} in ${ENVIRONMENT} environment`
   );
