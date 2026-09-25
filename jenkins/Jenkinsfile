@@ -56,6 +56,28 @@ pipeline {
             }
         }
 
+	 stage('Terraform Approval') {
+            steps {
+                input message: 'Terraform plan reviewed. Do you want to apply the infrastructure?', 
+                      ok: 'Apply Terraform'
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir('terraform') {
+                    withCredentials([
+                        [$class: 'AmazonWebServicesCredentialsBinding',
+                         credentialsId: 'jenkins-ecr-user']
+                    ]) {
+                        sh '''
+                            terraform apply -auto-approve
+                        '''
+                    }
+                }
+            }
+        }
+
         stage('Application Test') {
             steps {
                 dir('app') {
