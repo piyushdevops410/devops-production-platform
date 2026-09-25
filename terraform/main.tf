@@ -8,7 +8,7 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 
   tags = {
-    Name = "terraform-day12-vpc"
+    Name = "devops-production-project-vpc"
   }
 }
 
@@ -21,7 +21,7 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "terraform-day12-igw"
+    Name = "devops-production-project-igw"
   }
 }
 
@@ -37,7 +37,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "terraform-day12-public-subnet"
+    Name = "devops-production-project-public-subnet"
   }
 }
 
@@ -55,7 +55,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "terraform-day12-public-rt"
+    Name = "devops-production-project-public-rt"
   }
 }
 
@@ -75,7 +75,7 @@ resource "aws_route_table_association" "public" {
 # -------------------------
 
 resource "aws_security_group" "ec2" {
-  name        = "terraform-day12-ec2-sg"
+  name        = "devops-production-project-ec2-sg"
   description = "Security group for Terraform Day 12 EC2"
   vpc_id      = aws_vpc.main.id
 
@@ -87,6 +87,15 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = [var.ssh_allowed_cidr]
   }
 
+  ingress {
+    description = "Node.js Application"
+    from_port   = 3001
+    to_port     = 3001
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -95,7 +104,7 @@ resource "aws_security_group" "ec2" {
   }
 
   tags = {
-    Name = "terraform-day12-ec2-sg"
+    Name = "devops-production-project-ec2-sg"
   }
 }
 
@@ -139,6 +148,6 @@ resource "aws_instance" "web" {
   associate_public_ip_address = true
 
   tags = {
-    Name = "terraform-day12-web-server"
+    Name = "devops-production-project-web-server"
   }
 }
