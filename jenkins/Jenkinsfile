@@ -15,6 +15,46 @@ pipeline {
                 checkout scm
             }
         }
+	
+        stage('Terraform Init') {
+            steps {
+                dir('terraform') {
+                    withCredentials([
+                        [$class: 'AmazonWebServicesCredentialsBinding',
+                         credentialsId: 'jenkins-ecr-user']
+                    ]) {
+                        sh '''
+                            terraform init
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Terraform Validate') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                        terraform validate
+                    '''
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                dir('terraform') {
+                    withCredentials([
+                        [$class: 'AmazonWebServicesCredentialsBinding',
+                         credentialsId: 'jenkins-ecr-user']
+                    ]) {
+                        sh '''
+                            terraform plan
+                        '''
+                    }
+                }
+            }
+        }
 
         stage('Application Test') {
             steps {
