@@ -199,6 +199,27 @@ pipeline {
                 }
             }
         }
+
+	 stage('ECS Deployment') {
+            steps {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                     credentialsId: 'jenkins-ecr-user']
+                ]) {
+                    sh '''
+                        echo "Starting ECS deployment..."
+
+                        aws ecs update-service \
+                          --cluster devops-production-cluster \
+                          --service devops-production-app \
+                          --force-new-deployment \
+                          --region ${AWS_REGION}
+
+                        echo "ECS deployment triggered successfully."
+                    '''
+                }
+            }
+        }
     }
 
     post {
