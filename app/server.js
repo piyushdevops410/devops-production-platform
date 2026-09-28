@@ -1,12 +1,37 @@
 const express = require("express");
-
+const client = require("prom-client");
 const app = express();
+const register = new client.Registry();
+
+client.collectDefaultMetrics({
+  register
+});
+
+const httpRequestCounter = new client.Counter({
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status_code"],
+  registers: [register]
+});
+
 
 const PORT = process.env.PORT || 3001;
 const APP_VERSION = process.env.APP_VERSION || "1.0.0";
 const ENVIRONMENT = process.env.ENVIRONMENT || "development";
 
 app.use(express.json());
+app.use((req, res, next) => {
+  res.on("finish", () => {
+    httpRequestCounter.inc({
+      method: req.method,
+      route: req.route?.path || req.path,
+      status_code: res.statusCode
+    });
+  });
+
+  next();
+});
+
 
 /*
 ====================================================
@@ -506,6 +531,11 @@ app.get("/health", (req, res) => {
   });
 });
 
+
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", register.contentType);
+  res.end(await register.metrics());
+});
 
 /*
 ====================================================
